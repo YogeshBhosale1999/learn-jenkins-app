@@ -2,6 +2,8 @@ pipeline {
     agent any
 
     stages {
+
+        /*
         stage('Build') {
             agent {
                 docker {
@@ -20,6 +22,8 @@ pipeline {
                 '''
             }
         }
+        */
+
         stage('Test'){
              agent {
                 docker {
@@ -34,6 +38,23 @@ pipeline {
                     test -f build/index.html && echo "File exists" || echo "File missing"
                     npm test
                     ls -la
+                '''
+            }
+        }
+
+        stage('End-to-End'){
+             agent {
+                docker {
+                    image 'mcr.microsoft.com/playwright:v1.58.2-noble'
+                    reuseNode true
+                    args '-u root:root'
+                }
+            }
+            steps {
+                sh '''
+                    npm install -g serve
+                    node_modules/.bin/serve -s build
+                    npx playwright test
                 '''
             }
         }
