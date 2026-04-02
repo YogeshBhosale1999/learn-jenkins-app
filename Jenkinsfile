@@ -24,8 +24,6 @@ pipeline {
             steps {
                 sh '''
                     ls -la
-                    node --version
-                    npm --version
                     echo "Test Stage"
                     test -f build/index.html && echo "File exists" || echo "File missing"
                     npm test
