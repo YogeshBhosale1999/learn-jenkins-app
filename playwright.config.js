@@ -13,7 +13,7 @@ module.exports = defineConfig({
 
   reporter: [
     ['html'],
-    ['junit', { outputFile: 'test-results/junit.xml' }]
+    ['junit', { outputFile: 'zest-results/junit.xml' }]
   ],
 
   use: {
