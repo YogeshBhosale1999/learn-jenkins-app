@@ -22,7 +22,7 @@ pipeline {
                 '''
             }
         }
-        */
+        
 
         stage('Test'){
              agent {
@@ -41,7 +41,7 @@ pipeline {
                 '''
             }
         }
-
+        */
         stage('End-to-End'){
              agent {
                 docker {
@@ -63,7 +63,7 @@ pipeline {
 
     post{
         always{
-            junit 'jest-results/junit.xml'
+            junit 'test-results/junit.xml'
         }
     }
 }
