@@ -80,7 +80,7 @@ pipeline {
                                 keepAll: false,
                                 reportDir: 'playwright-report',
                                 reportFiles: 'index.html',
-                                reportName: 'Playwright HTML Report',
+                                reportName: 'Playwright Local HTML Report',
                                 reportTitles: '',
                                 useWrapperFileDirectly: true
                             ])
@@ -105,13 +105,12 @@ pipeline {
                     npx netlify status
 
                     # Step 1: Draft deploy (manual upload, no build system)
-                    DRAFT_OUTPUT=$(npx netlify deploy \
+                    npx netlify deploy \
                         --dir=build \
                         --site $NETLIFY_SITE_ID \
                         --auth $NETLIFY_AUTH_TOKEN \
-                        --json)
-
-                    echo "Draft deploy complete: $DRAFT_OUTPUT"
+                        --json \
+                        --no-build
 
                     # Step 2: Promote draft to production
                     npx netlify deploy \
@@ -120,6 +119,7 @@ pipeline {
                         --site $NETLIFY_SITE_ID \
                         --auth $NETLIFY_AUTH_TOKEN \
                         --json \
+                        --no-build \
                         --skip-functions
 
                     ls -la
@@ -127,5 +127,40 @@ pipeline {
             }
         }
 
+        stage('Prod End-to-End') {
+            agent {
+                docker {
+                    image 'mcr.microsoft.com/playwright:v1.58.2-noble'
+                    reuseNode true
+                    args '-u root:root'
+                }
+            }
+            
+            environment {
+                CI_ENVIRONMENT_URL = "https://startling-shortbread-d7ebe6.netlify.app"
+            }
+
+            steps {
+                sh '''
+                    npx playwright test --reporter=html
+                '''
+            }
+
+            post {
+                always {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: false,
+                        icon: '',
+                        keepAll: false,
+                        reportDir: 'playwright-report',
+                        reportFiles: 'index.html',
+                        reportName: 'Playwright E2E HTML Report',
+                        reportTitles: '',
+                        useWrapperFileDirectly: true
+                    ])
+                }
+            }
+        }
     }
 }
