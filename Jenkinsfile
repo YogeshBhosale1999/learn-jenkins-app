@@ -22,8 +22,10 @@ pipeline {
                             echo "Unit Test Stage"
                             test -f build/index.html && echo "File exists" || echo "File missing"
 
-                            rm -rf node_modules package-lock.json
+                            rm -rf node_modules
                             npm ci
+
+                            # Ensure ansi-escapes is present
                             npm install ansi-escapes --save-dev
 
                             npm test
@@ -42,7 +44,7 @@ pipeline {
                     }
                     steps {
                         sh '''
-                            rm -rf node_modules package-lock.json
+                            rm -rf node_modules
                             npm ci
                             npm install serve
 
