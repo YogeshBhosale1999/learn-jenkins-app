@@ -121,7 +121,7 @@ pipeline {
                         --auth $NETLIFY_AUTH_TOKEN \
                         --json \
                         --no-build \
-                        --skip-functions
+                        --skip-functions-cache
 
                     ls -la
                 '''
