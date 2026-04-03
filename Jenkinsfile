@@ -104,7 +104,7 @@ pipeline {
                     npm install netlify-cli # local install
                     echo "Deploying to production. Site ID : $NETLIFY_SITE_ID"
                     npx netlify status
-                    npx netlify deploy --prod --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN --dir=build
+                    npx netlify deploy --prod --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN --skip=build
                     ls -la
                 '''
             }
