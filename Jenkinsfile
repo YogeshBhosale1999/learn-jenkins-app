@@ -1,7 +1,7 @@
 pipeline {
     agent any
 
-    environment{
+    environment {
         NETLIFY_SITE_ID = "b0eda2c9-1a67-4c10-97e8-15a8b6e8ff59"
         NETLIFY_AUTH_TOKEN = credentials('netlify-token')
     }
@@ -18,18 +18,22 @@ pipeline {
             }
             steps {
                 sh '''
-                    ls -la
                     node --version
                     npm --version
                     npm ci
                     npm run build
-                    ls -la
                 '''
             }
+            post {
+                success {
+                    stash name: 'build-artifacts', includes: 'build/**'
+                }
+            }
         }
-        
+
         stage('Run tests in parallel') {
             parallel {
+
                 stage('Test') {
                     agent {
                         docker {
@@ -39,21 +43,21 @@ pipeline {
                         }
                     }
                     steps {
+                        unstash 'build-artifacts'
                         sh '''
-                            ls -la
-                            echo "Test Stage"
-                            test -f build/index.html && echo "File exists" || echo "File missing"
+                            npm ci
+                            echo "Running unit tests..."
+                            test -f build/index.html && echo "File exists" || exit 1
                             npm test
-                            ls -la
                         '''
                     }
                     post {
                         always {
-                            junit 'zest-results/junit.xml'
+                            junit allowEmptyResults: true, testResults: 'zest-results/junit.xml'
                         }
                     }
                 }
-        
+
                 stage('End-to-End') {
                     agent {
                         docker {
@@ -63,26 +67,30 @@ pipeline {
                         }
                     }
                     steps {
+                        unstash 'build-artifacts'
                         sh '''
+                            npm ci
                             npm install serve
-                            nohup node_modules/.bin/serve -s build > serve.log 2>&1 &
+                            
+                            echo "Starting app..."
+                            npx serve -s build &
                             sleep 10
+                            
+                            echo "Running Playwright tests..."
                             npx playwright test --reporter=html
-                            kill $(jobs -p) || true
+                            
+                            pkill -f serve || true
                         '''
                     }
                     post {
                         always {
                             publishHTML([
-                                allowMissing: false,
-                                alwaysLinkToLastBuild: false,
-                                icon: '',
-                                keepAll: false,
+                                allowMissing: true,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
                                 reportDir: 'playwright-report',
                                 reportFiles: 'index.html',
-                                reportName: 'Playwright HTML Report',
-                                reportTitles: '',
-                                useWrapperFileDirectly: true
+                                reportName: 'Playwright HTML Report'
                             ])
                         }
                     }
@@ -99,16 +107,18 @@ pipeline {
                 }
             }
             steps {
+                unstash 'build-artifacts'
                 sh '''
-                    ls -la
-                    npm install netlify-cli # local install
-                    echo "Deploying to production. Site ID : $NETLIFY_SITE_ID"
-                    npx netlify status
-                    npx netlify deploy --prod --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN --skip-build
-                    ls -la
+                    npm install -g netlify-cli
+                    echo "Deploying to production. Site ID: $NETLIFY_SITE_ID"
+                    
+                    npx netlify deploy \
+                        --prod \
+                        --dir=build \
+                        --site=$NETLIFY_SITE_ID \
+                        --auth=$NETLIFY_AUTH_TOKEN
                 '''
             }
         }
-
     }
 }
