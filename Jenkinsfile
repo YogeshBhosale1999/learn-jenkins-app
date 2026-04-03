@@ -3,7 +3,6 @@ pipeline {
 
     stages {
 
-        /*
         stage('Build') {
             agent {
                 docker {
@@ -23,12 +22,9 @@ pipeline {
             }
         }
         
-        */
-        stage('Run tests in parallel'){
-            
-            parallel{
-
-                stage('Test'){
+        stage('Run tests in parallel') {
+            parallel {
+                stage('Test') {
                     agent {
                         docker {
                             image 'node:18-alpine'
@@ -46,7 +42,7 @@ pipeline {
                     }
                 }
         
-                stage('End-to-End'){
+                stage('End-to-End') {
                     agent {
                         docker {
                             image 'mcr.microsoft.com/playwright:v1.58.2-noble'
@@ -57,21 +53,31 @@ pipeline {
                     steps {
                         sh '''
                             npm install serve
-                            node_modules/.bin/serve -s build &
+                            nohup node_modules/.bin/serve -s build > serve.log 2>&1 &
                             sleep 10
                             npx playwright test --reporter=html
+                            kill $(jobs -p) || true
                         '''
                     }
                 }
-
             }
         }
     }
 
-    post{
-        always{
+    post {
+        always {
             junit 'zest-results/junit.xml'
-            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+            publishHTML([
+                allowMissing: false,
+                alwaysLinkToLastBuild: false,
+                icon: '',
+                keepAll: false,
+                reportDir: 'playwright-report',
+                reportFiles: 'index.html',
+                reportName: 'Playwright HTML Report',
+                reportTitles: '',
+                useWrapperFileDirectly: true
+            ])
         }
     }
 }
