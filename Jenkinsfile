@@ -20,6 +20,7 @@ pipeline {
                     ls -la
                     node --version
                     npm --version
+                    rm -rf node_modules package-lock.json
                     npm ci
                     npm run build
                     ls -la
@@ -40,8 +41,16 @@ pipeline {
                     steps {
                         sh '''
                             ls -la
-                            echo "Test Stage"
+                            echo "Unit Test Stage"
                             test -f build/index.html && echo "File exists" || echo "File missing"
+
+                            # Clean install to avoid stale node_modules
+                            rm -rf node_modules package-lock.json
+                            npm ci
+
+                            # Explicitly install ansi-escapes to fix missing dependency
+                            npm install ansi-escapes --save-dev
+
                             npm test
                             ls -la
                         '''
@@ -58,10 +67,22 @@ pipeline {
                     }
                     steps {
                         sh '''
+                            rm -rf node_modules package-lock.json
                             npm ci
                             npm install serve
+
                             node_modules/.bin/serve -s build &
-                            sleep 10
+                            
+                            # Wait until the server is actually responding
+                            for i in {1..30}; do
+                              if curl -s http://localhost:3000 > /dev/null; then
+                                echo "Server is up!"
+                                break
+                              fi
+                              echo "Waiting for server..."
+                              sleep 2
+                            done
+
                             npx playwright test --reporter=html
                         '''
                     }
