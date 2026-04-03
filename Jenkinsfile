@@ -42,6 +42,11 @@ pipeline {
                             ls -la
                         '''
                     }
+                    post {
+                        always {
+                            junit 'zest-results/junit.xml'
+                        }
+                    }
                 }
         
                 stage('End-to-End') {
@@ -61,25 +66,23 @@ pipeline {
                             kill $(jobs -p) || true
                         '''
                     }
+                    post {
+                        always {
+                            publishHTML([
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: false,
+                                icon: '',
+                                keepAll: false,
+                                reportDir: 'playwright-report',
+                                reportFiles: 'index.html',
+                                reportName: 'Playwright HTML Report',
+                                reportTitles: '',
+                                useWrapperFileDirectly: true
+                            ])
+                        }
+                    }
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            junit 'zest-results/junit.xml'
-            publishHTML([
-                allowMissing: false,
-                alwaysLinkToLastBuild: false,
-                icon: '',
-                keepAll: false,
-                reportDir: 'playwright-report',
-                reportFiles: 'index.html',
-                reportName: 'Playwright HTML Report',
-                reportTitles: '',
-                useWrapperFileDirectly: true
-            ])
         }
     }
 }
