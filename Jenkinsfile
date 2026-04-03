@@ -94,7 +94,7 @@ pipeline {
         stage('Deploy Staging') {
             agent {
                 docker {
-                    image 'node:18-alpine'
+                    image 'node:20-alpine'
                     reuseNode true
                     args '-u root:root' 
                 }
@@ -102,6 +102,7 @@ pipeline {
             steps {
                 sh '''
                     ls -la
+                    apk add --no-cache jq
                     npm install -g netlify-cli@latest
                     echo "Deploying to staging. Site ID : $NETLIFY_SITE_ID"
                     npx netlify status
@@ -112,7 +113,9 @@ pipeline {
                         --site $NETLIFY_SITE_ID \
                         --auth $NETLIFY_AUTH_TOKEN \
                         --json \
-                        --no-build
+                        --no-build > stag-deploy-output.json
+
+                    jq -r '.deploy_url' stag-deploy-output.json
 
                     ls -la
                 '''
@@ -131,7 +134,7 @@ pipeline {
         stage('Deploy Prod') {
             agent {
                 docker {
-                    image 'node:18-alpine'
+                    image 'node:20-alpine'
                     reuseNode true
                     args '-u root:root' 
                 }
@@ -139,6 +142,7 @@ pipeline {
             steps {
                 sh '''
                     ls -la
+                    apk add --no-cache jq
                     npm install -g netlify-cli@latest
                     echo "Deploying to production. Site ID : $NETLIFY_SITE_ID"
                     npx netlify status
@@ -149,7 +153,9 @@ pipeline {
                         --site $NETLIFY_SITE_ID \
                         --auth $NETLIFY_AUTH_TOKEN \
                         --json \
-                        --no-build
+                        --no-build > deploy-output.json
+
+                    jq -r '.deploy_url' deploy-output.json
 
                     # Step 2: Promote draft to production
                     npx netlify deploy \
@@ -159,7 +165,9 @@ pipeline {
                         --auth $NETLIFY_AUTH_TOKEN \
                         --json \
                         --no-build \
-                        --skip-functions-cache
+                        --skip-functions-cache > prod-deploy-output.json
+
+                    jq -r '.deploy_url' prod-deploy-output.json
 
                     ls -la
                 '''
