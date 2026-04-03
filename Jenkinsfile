@@ -103,11 +103,29 @@ pipeline {
                     npm install -g netlify-cli@latest
                     echo "Deploying to production. Site ID : $NETLIFY_SITE_ID"
                     npx netlify status
-                    # Manual deploy of Jenkins-built folder
-                    npx netlify deploy --prod --dir=build --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN --json
+
+                    # Step 1: Draft deploy (manual upload, no build system)
+                    DRAFT_OUTPUT=$(npx netlify deploy \
+                        --dir=build \
+                        --site $NETLIFY_SITE_ID \
+                        --auth $NETLIFY_AUTH_TOKEN \
+                        --json)
+
+                    echo "Draft deploy complete: $DRAFT_OUTPUT"
+
+                    # Step 2: Promote draft to production
+                    npx netlify deploy \
+                        --prod \
+                        --dir=build \
+                        --site $NETLIFY_SITE_ID \
+                        --auth $NETLIFY_AUTH_TOKEN \
+                        --json \
+                        --skip-functions
+
                     ls -la
                 '''
             }
         }
+
     }
 }
