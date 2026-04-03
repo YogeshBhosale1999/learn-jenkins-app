@@ -2,33 +2,10 @@ pipeline {
     agent any
 
     options {
-        timestamps() // adds timestamps to logs for better readability
+        timestamps()
     }
 
     stages {
-
-        /*
-        stage('Build') {
-            agent {
-                docker {
-                    image 'node:18-alpine'
-                    reuseNode true
-                }
-            }
-            steps {
-                sh '''
-                    ls -la
-                    node --version
-                    npm --version
-                    rm -rf node_modules package-lock.json
-                    npm ci
-                    npm run build
-                    ls -la
-                '''
-            }
-        }
-        */
-
         stage('Run Tests in Parallel') {
             parallel {
                 stage('Unit Test') {
@@ -36,6 +13,7 @@ pipeline {
                         docker {
                             image 'node:18-alpine'
                             reuseNode true
+                            args '-u root:root'
                         }
                     }
                     steps {
@@ -44,11 +22,8 @@ pipeline {
                             echo "Unit Test Stage"
                             test -f build/index.html && echo "File exists" || echo "File missing"
 
-                            # Clean install to avoid stale node_modules
                             rm -rf node_modules package-lock.json
                             npm ci
-
-                            # Explicitly install ansi-escapes to fix missing dependency
                             npm install ansi-escapes --save-dev
 
                             npm test
@@ -72,8 +47,6 @@ pipeline {
                             npm install serve
 
                             node_modules/.bin/serve -s build &
-                            
-                            # Wait until the server is actually responding
                             for i in {1..30}; do
                               if curl -s http://localhost:3000 > /dev/null; then
                                 echo "Server is up!"
