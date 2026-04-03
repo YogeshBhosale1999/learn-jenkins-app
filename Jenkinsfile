@@ -104,11 +104,17 @@ pipeline {
                     npm install netlify-cli
                     echo "Deploying to production. Site ID : $NETLIFY_SITE_ID"
                     npx netlify status
-                    # Deploy the already-built folder
-                    npx netlify deploy --prod --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN --dir=build
+                    # Deploy the already-built folder, override Netlify build command
+                    npx netlify deploy \
+                        --prod \
+                        --site $NETLIFY_SITE_ID \
+                        --auth $NETLIFY_AUTH_TOKEN \
+                        --dir=build \
+                        --build-command=""
                     ls -la
                 '''
             }
+
         }
 
     }
