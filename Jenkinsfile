@@ -101,13 +101,14 @@ pipeline {
             steps {
                 sh '''
                     ls -la
-                    npm install netlify-cli # "g" was removed because we dont want global scope
-                    npx netlify
+                    npm install netlify-cli # local install
                     echo "Deploying to production. Site ID : $NETLIFY_SITE_ID"
-                    netlify status
+                    npx netlify status
+                    npx netlify deploy --prod --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN
                     ls -la
                 '''
             }
         }
+
     }
 }
