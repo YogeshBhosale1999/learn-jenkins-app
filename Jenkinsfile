@@ -109,8 +109,7 @@ pipeline {
                         --prod \
                         --site $NETLIFY_SITE_ID \
                         --auth $NETLIFY_AUTH_TOKEN \
-                        --dir=build \
-                        --build-command=""
+                        --dir=build
                     ls -la
                 '''
             }
