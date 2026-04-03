@@ -102,7 +102,7 @@ pipeline {
                     ls -la
                     npm install netlify-cli # "g" was removed because we dont want global scope
                     npx netlify
-                    echo "Deploying to production. Site ID : $NETLIFY_SITE_ID
+                    echo "Deploying to production. Site ID : $NETLIFY_SITE_ID"
                     ls -la
                 '''
             }
