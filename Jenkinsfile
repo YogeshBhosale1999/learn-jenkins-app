@@ -115,10 +115,47 @@ pipeline {
                         --json \
                         --no-build > stag-deploy-output.json
 
-                    jq -r '.deploy_url' stag-deploy-output.json
-
                     ls -la
                 '''
+                script{
+                    env.STAGING_URL = sh(script: "jq -r '.deploy_url' stag-deploy-output.json", returnStdout : true)
+                }
+            }
+        }
+
+        stage('Stag End-to-End') {
+            agent {
+                docker {
+                    image 'mcr.microsoft.com/playwright:v1.58.2-noble'
+                    reuseNode true
+                    args '-u root:root'
+                }
+            }
+            
+            environment {
+                CI_ENVIRONMENT_URL = "$env.STAGING_URL"
+            }
+
+            steps {
+                sh '''
+                    npx playwright test --reporter=html
+                '''
+            }
+
+            post {
+                always {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: false,
+                        icon: '',
+                        keepAll: false,
+                        reportDir: 'playwright-report',
+                        reportFiles: 'index.html',
+                        reportName: 'Playwright Staging E2E HTML Report',
+                        reportTitles: '',
+                        useWrapperFileDirectly: true
+                    ])
+                }
             }
         }
 
@@ -202,7 +239,7 @@ pipeline {
                         keepAll: false,
                         reportDir: 'playwright-report',
                         reportFiles: 'index.html',
-                        reportName: 'Playwright E2E HTML Report',
+                        reportName: 'Playwright Production E2E HTML Report',
                         reportTitles: '',
                         useWrapperFileDirectly: true
                     ])
