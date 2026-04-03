@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    options {
-        timestamps()
-    }
-
     stages {
 
         /*
@@ -13,7 +9,6 @@ pipeline {
                 docker {
                     image 'node:18-alpine'
                     reuseNode true
-                    args '-u root:root'
                 }
             }
             steps {
@@ -21,41 +16,37 @@ pipeline {
                     ls -la
                     node --version
                     npm --version
-                    rm -rf node_modules
-                    npm ci --force
+                    npm ci
                     npm run build
                     ls -la
                 '''
             }
         }
+        
         */
+        stage('Run tests in parallel'){
+            
+            parallel{
 
-        stage('Run Tests in Parallel') {
-            parallel {
-                stage('Unit Test') {
+                stage('Test'){
                     agent {
                         docker {
                             image 'node:18-alpine'
                             reuseNode true
-                            args '-u root:root'
                         }
                     }
                     steps {
                         sh '''
-                            echo "Unit Test Stage"
+                            ls -la
+                            echo "Test Stage"
                             test -f build/index.html && echo "File exists" || echo "File missing"
-
-                            npx rimraf node_modules || rm -rf node_modules
-                            npm ci --force
-
-                            npm install ansi-escapes --save-dev
-
                             npm test
+                            ls -la
                         '''
                     }
                 }
-
-                stage('End-to-End Test') {
+        
+                stage('End-to-End'){
                     agent {
                         docker {
                             image 'mcr.microsoft.com/playwright:v1.58.2-noble'
@@ -65,42 +56,22 @@ pipeline {
                     }
                     steps {
                         sh '''
-                            npx rimraf node_modules || rm -rf node_modules
-                            npm ci --force
                             npm install serve
-
                             node_modules/.bin/serve -s build &
-                            for i in {1..30}; do
-                              if curl -s http://localhost:3000 > /dev/null; then
-                                echo "Server is up!"
-                                break
-                              fi
-                              echo "Waiting for server..."
-                              sleep 2
-                            done
-
+                            sleep 10
                             npx playwright test --reporter=html
                         '''
                     }
                 }
+
             }
         }
     }
 
-    post {
-        always {
+    post{
+        always{
             junit 'zest-results/junit.xml'
-            publishHTML([
-                allowMissing: false,
-                alwaysLinkToLastBuild: false,
-                icon: '',
-                keepAll: false,
-                reportDir: 'playwright-report',
-                reportFiles: 'index.html',
-                reportName: 'Playwright HTML Report',
-                reportTitles: '',
-                useWrapperFileDirectly: true
-            ])
+            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright HTML Report', reportTitles: '', useWrapperFileDirectly: true])
         }
     }
 }
