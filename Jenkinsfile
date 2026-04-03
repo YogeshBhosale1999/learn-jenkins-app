@@ -6,6 +6,30 @@ pipeline {
     }
 
     stages {
+
+        /*
+        stage('Build') {
+            agent {
+                docker {
+                    image 'node:18-alpine'
+                    reuseNode true
+                    args '-u root:root'
+                }
+            }
+            steps {
+                sh '''
+                    ls -la
+                    node --version
+                    npm --version
+                    rm -rf node_modules
+                    npm ci --force
+                    npm run build
+                    ls -la
+                '''
+            }
+        }
+        */
+
         stage('Run Tests in Parallel') {
             parallel {
                 stage('Unit Test') {
@@ -18,18 +42,15 @@ pipeline {
                     }
                     steps {
                         sh '''
-                            ls -la
                             echo "Unit Test Stage"
                             test -f build/index.html && echo "File exists" || echo "File missing"
 
-                            rm -rf node_modules
-                            npm ci
+                            npx rimraf node_modules || rm -rf node_modules
+                            npm ci --force
 
-                            # Ensure ansi-escapes is present
                             npm install ansi-escapes --save-dev
 
                             npm test
-                            ls -la
                         '''
                     }
                 }
@@ -44,8 +65,8 @@ pipeline {
                     }
                     steps {
                         sh '''
-                            rm -rf node_modules
-                            npm ci
+                            npx rimraf node_modules || rm -rf node_modules
+                            npm ci --force
                             npm install serve
 
                             node_modules/.bin/serve -s build &
