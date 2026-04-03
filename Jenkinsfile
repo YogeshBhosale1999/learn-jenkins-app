@@ -96,8 +96,8 @@ pipeline {
             steps {
                 sh '''
                     ls -la
-                    npm install netlify-cli // "g" was removed because we dont want global scope
-                    netlify
+                    npm install netlify-cli # "g" was removed because we dont want global scope
+                    npx netlify
                     ls -la
                 '''
             }
