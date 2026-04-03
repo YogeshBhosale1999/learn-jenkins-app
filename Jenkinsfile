@@ -94,27 +94,20 @@ pipeline {
             agent {
                 docker {
                     image 'node:18-alpine'
-                    reuseNode true
                     args '-u root:root'
                 }
             }
             steps {
                 sh '''
                     ls -la
-                    npm install netlify-cli
+                    npm install -g netlify-cli@latest
                     echo "Deploying to production. Site ID : $NETLIFY_SITE_ID"
                     npx netlify status
-                    # Deploy the already-built folder, override Netlify build command
-                    npx netlify deploy \
-                        --prod \
-                        --site $NETLIFY_SITE_ID \
-                        --auth $NETLIFY_AUTH_TOKEN \
-                        --dir=build
+                    # Manual deploy of Jenkins-built folder
+                    npx netlify deploy --prod --dir=build --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN --json
                     ls -la
                 '''
             }
-
         }
-
     }
 }
