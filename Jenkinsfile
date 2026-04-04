@@ -117,7 +117,7 @@ pipeline {
                 }
             }
             environment {
-                CI_ENVIRONMENT_URL = "http://learn-jenkins-yjb.s3-website-ap-south-1.amazonaws.com/${env.STAGING_PATH}/"
+                CI_ENVIRONMENT_URL = "http://learn-jenkins-yjb.s3-website-ap-south-1.amazonaws.com/${STAGING_PATH}/"
             }
             steps {
                 sh '''
