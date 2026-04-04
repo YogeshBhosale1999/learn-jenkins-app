@@ -50,7 +50,7 @@ pipeline {
         stage('Deploy to AWS ECS') {
             agent {
                 docker {
-                    image 'amazon/aws-cli'
+                    image 'my-aws-cli'
                     reuseNode true
                     args '--entrypoint="" -u root:root'
                 }
@@ -62,7 +62,6 @@ pipeline {
                     sh '''
                         set -e
                         aws --version
-                        yum install -y jq
 
                         # Register new task definition and capture full ARN
                         NEW_TD_ARN=$(aws ecs register-task-definition \
