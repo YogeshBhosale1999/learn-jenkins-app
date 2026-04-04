@@ -63,7 +63,7 @@ pipeline {
                 stage('End-to-End') {
                     agent {
                         docker {
-                            image 'mcr.microsoft.com/playwright:v1.58.2-noble'
+                            image 'my-playwright:latest'
                             reuseNode true
                             args '-u root:root'
                         }
@@ -100,7 +100,7 @@ pipeline {
         stage('Deploy Staging') {
             agent {
                 docker {
-                    image 'node:20-alpine'
+                    image 'my-playwright:latest'
                     reuseNode true
                     args '-u root:root' 
                 }
@@ -108,8 +108,6 @@ pipeline {
             steps {
                 sh '''
                     ls -la
-                    apk add --no-cache jq
-                    npm install -g netlify-cli@latest
                     echo "Deploying to staging. Site ID : $NETLIFY_SITE_ID"
                     npx netlify status
 
@@ -132,7 +130,7 @@ pipeline {
         stage('Stag End-to-End') {
             agent {
                 docker {
-                    image 'mcr.microsoft.com/playwright:v1.58.2-noble'
+                    image 'my-playwright:latest'
                     reuseNode true
                     args '-u root:root'
                 }
@@ -177,7 +175,7 @@ pipeline {
         stage('Deploy Prod') {
             agent {
                 docker {
-                    image 'node:20-alpine'
+                    image 'my-playwright:latest'
                     reuseNode true
                     args '-u root:root' 
                 }
@@ -185,8 +183,6 @@ pipeline {
             steps {
                 sh '''
                     ls -la
-                    apk add --no-cache jq
-                    npm install -g netlify-cli@latest
                     echo "Deploying to production. Site ID : $NETLIFY_SITE_ID"
                     npx netlify status
 
@@ -220,7 +216,7 @@ pipeline {
         stage('Prod End-to-End') {
             agent {
                 docker {
-                    image 'mcr.microsoft.com/playwright:v1.58.2-noble'
+                    image 'my-playwright:latest'
                     reuseNode true
                     args '-u root:root'
                 }
