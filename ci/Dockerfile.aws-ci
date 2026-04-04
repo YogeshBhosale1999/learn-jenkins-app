@@ -1,7 +1,6 @@
-FROM docker:24.0
+FROM amazonlinux:2
 
-# Install AWS CLI v2 and jq
-RUN apk add --no-cache curl unzip bash jq \
+RUN yum install -y unzip curl jq \
     && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
     && unzip awscliv2.zip \
     && ./aws/install \
