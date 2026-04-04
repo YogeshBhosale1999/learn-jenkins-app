@@ -5,6 +5,7 @@ pipeline {
         AWS_DEFAULT_REGION     = 'us-east-1'
         AWS_ECS_CLUSTER        = 'LearnJenkinsAppCluster-Prod'
         AWS_ECS_SERVICE_PROD   = 'LearnJenkinsApp-TaskDefinition-Prod-service'
+        REACT_APP_VERSION = "1.0.$BUILD_NUMBER"
     }
 
     stages {
@@ -42,7 +43,7 @@ pipeline {
                 sh '''
                     set -e
                     docker version
-                    docker build -t myjenkinsapp:latest .
+                    docker build -t myjenkinsapp:$REACT_APP_VERSION .
                 '''
             }
         }
