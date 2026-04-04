@@ -52,7 +52,7 @@ pipeline {
                 docker {
                     image 'my-aws-cli'
                     reuseNode true
-                    args '--entrypoint="" -u root:root'
+                    args '--entrypoint="" -u root:root -v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
             steps {
@@ -62,6 +62,7 @@ pipeline {
                     sh '''
                         set -e
                         aws --version
+                        jq --version
 
                         # Register new task definition and capture full ARN
                         NEW_TD_ARN=$(aws ecs register-task-definition \
