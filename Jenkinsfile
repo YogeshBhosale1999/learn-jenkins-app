@@ -23,8 +23,6 @@ pipeline {
             steps {
                 sh '''
                     set -e
-                    node --version
-                    npm --version
                     npm ci
                     npm run build
                 '''
@@ -35,6 +33,7 @@ pipeline {
             agent {
                 docker {
                     image 'docker:24.0'
+                    reuseNode true
                     args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
@@ -51,6 +50,7 @@ pipeline {
             agent {
                 docker {
                     image 'amazon/aws-cli:2.15.0'
+                    reuseNode true
                     args '--entrypoint="" -u root:root'
                 }
             }
@@ -72,6 +72,7 @@ pipeline {
             agent {
                 docker {
                     image 'docker:24.0'
+                    reuseNode true
                     args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
@@ -87,6 +88,7 @@ pipeline {
             agent {
                 docker {
                     image 'amazon/aws-cli:2.15.0'
+                    reuseNode true
                     args '--entrypoint="" -u root:root'
                 }
             }
