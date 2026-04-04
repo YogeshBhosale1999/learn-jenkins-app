@@ -36,7 +36,7 @@ pipeline {
         stage('Build Docker Image') {
             agent {
                 docker {
-                    image 'amazon/aws-cli:2.15.0'   // AWS CLI v2 official image
+                    image 'my-aws-docker'
                     reuseNode true
                     args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
                 }
