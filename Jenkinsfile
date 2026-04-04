@@ -22,36 +22,18 @@ pipeline {
             }
             steps {
                 sh '''
-                    set -e
                     npm ci
                     npm run build
                 '''
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build & Push Docker Image') {
             agent {
                 docker {
-                    image 'docker:24.0'
+                    image 'my-aws-docker-cli'   // local image with Docker + AWS CLI
                     reuseNode true
                     args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
-            steps {
-                sh '''
-                    set -e
-                    docker version
-                    docker build -t $AWS_DOCKER_ECR/$APP_NAME:$REACT_APP_VERSION .
-                '''
-            }
-        }
-
-        stage('Login to ECR') {
-            agent {
-                docker {
-                    image 'amazon/aws-cli:2.15.0'
-                    reuseNode true
-                    args '--entrypoint="" -u root:root'
                 }
             }
             steps {
@@ -59,35 +41,27 @@ pipeline {
                                                   passwordVariable: 'AWS_SECRET_ACCESS_KEY',
                                                   usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
                     sh '''
-                        set -e
+                        docker version
                         aws --version
+
+                        # Build and tag image
+                        docker build -t $AWS_DOCKER_ECR/$APP_NAME:$REACT_APP_VERSION .
+
+                        # Login to ECR
                         aws ecr get-login-password --region $AWS_DEFAULT_REGION \
                             | docker login --username AWS --password-stdin $AWS_DOCKER_ECR
+
+                        # Push image
+                        docker push $AWS_DOCKER_ECR/$APP_NAME:$REACT_APP_VERSION
                     '''
                 }
-            }
-        }
-
-        stage('Push Docker Image') {
-            agent {
-                docker {
-                    image 'docker:24.0'
-                    reuseNode true
-                    args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
-            steps {
-                sh '''
-                    set -e
-                    docker push $AWS_DOCKER_ECR/$APP_NAME:$REACT_APP_VERSION
-                '''
             }
         }
 
         stage('Deploy to AWS ECS') {
             agent {
                 docker {
-                    image 'amazon/aws-cli:2.15.0'
+                    image 'my-aws-docker-cli'   // same local image
                     reuseNode true
                     args '--entrypoint="" -u root:root'
                 }
@@ -97,15 +71,12 @@ pipeline {
                                                   passwordVariable: 'AWS_SECRET_ACCESS_KEY',
                                                   usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
                     sh '''
-                        set -e
                         aws --version
                         jq --version
 
                         NEW_TD_ARN=$(aws ecs register-task-definition \
                             --cli-input-json file://aws/task-definition-prod.json \
                             | jq -r '.taskDefinition.taskDefinitionArn')
-
-                        echo "New Task Definition ARN: $NEW_TD_ARN"
 
                         aws ecs update-service \
                             --cluster $AWS_ECS_CLUSTER \
