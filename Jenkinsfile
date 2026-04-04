@@ -52,6 +52,10 @@ pipeline {
                                 --service LearnJenkinsApp-TaskDefinition-Prod-service \
                                 --task-definition LearnJenkinsApp-TaskDefinition-Prod:$LATEST_TD_REVISION
 
+                        aws ecs wait services-stable \
+                                --cluster LearnJenkinsAppCluster-Prod \
+                                --services LearnJenkinsApp-TaskDefinition-Prod-service
+
 
                     '''
                 }
