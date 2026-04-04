@@ -1,18 +1,15 @@
 pipeline {
     agent any
 
-    environment{
-        AWS_DEFAULT_REGION = 'us-east-1'
-        AWS_ECS_CLUSTER = 'LearnJenkinsAppCluster-Prod'
-        AWS_ECS_SERVICE_PROD = 'LearnJenkinsApp-TaskDefinition-Prod-service'
-        AWS_ECS_TASK_DEFINITION = 'LearnJenkinsApp-TaskDefinition-Prod'
-
+    environment {
+        AWS_DEFAULT_REGION     = 'us-east-1'
+        AWS_ECS_CLUSTER        = 'LearnJenkinsAppCluster-Prod'
+        AWS_ECS_SERVICE_PROD   = 'LearnJenkinsApp-TaskDefinition-Prod-service'
     }
-
 
     stages {
 
-        stage('Build') {
+        stage('Build Node App') {
             agent {
                 docker {
                     image 'node:18-alpine'
@@ -22,6 +19,7 @@ pipeline {
             }
             steps {
                 sh '''
+                    set -e
                     ls -la
                     node --version
                     npm --version
@@ -32,55 +30,60 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image'){
+        stage('Build Docker Image') {
+            agent {
+                docker {
+                    image 'docker:24.0'   // use official Docker image
+                    reuseNode true
+                    args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
+                }
+            }
+            steps {
+                sh '''
+                    set -e
+                    docker version
+                    docker build -t myjenkinsapp:latest .
+                '''
+            }
+        }
+
+        stage('Deploy to AWS ECS') {
             agent {
                 docker {
                     image 'amazon/aws-cli'
                     reuseNode true
-                    args '--entrypoint="" -u root:root -v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
-
-            steps{
-                sh '''
-                    amazon-linux-extras install docker
-                    docker build -t myjenkinsapp:latest . 
-                '''
-            }
-        }
-        
-        stage('Deploy to AWS'){
-            agent{
-                docker{
-                    image 'amazon/aws-cli'
                     args '--entrypoint="" -u root:root'
                 }
             }
-
-            steps{
-                withCredentials([usernamePassword(credentialsId: 'MY-AWS-TOKEN', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'MY-AWS-TOKEN',
+                                                 passwordVariable: 'AWS_SECRET_ACCESS_KEY',
+                                                 usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
                     sh '''
+                        set -e
                         aws --version
+                        yum install -y jq
 
-                        yum install jq -y
+                        # Register new task definition and capture full ARN
+                        NEW_TD_ARN=$(aws ecs register-task-definition \
+                            --cli-input-json file://aws/task-definition-prod.json \
+                            | jq -r '.taskDefinition.taskDefinitionArn')
 
-                        LATEST_TD_REVISION=$(aws ecs register-task-definition --cli-input-json file://aws/task-definition-prod.json | jq '.taskDefinition.revision')
+                        echo "New Task Definition ARN: $NEW_TD_ARN"
 
+                        # Update ECS service with new task definition
                         aws ecs update-service \
-                                --cluster $AWS_ECS_CLUSTER \
-                                --service $AWS_ECS_SERVICE_PROD \
-                                --task-definition $AWS_ECS_TASK_DEFINITION:$LATEST_TD_REVISION
+                            --cluster $AWS_ECS_CLUSTER \
+                            --service $AWS_ECS_SERVICE_PROD \
+                            --task-definition $NEW_TD_ARN
 
+                        # Wait until service is stable
                         aws ecs wait services-stable \
-                                --cluster $AWS_ECS_CLUSTER \
-                                --services $AWS_ECS_SERVICE_PROD
-
-
+                            --cluster $AWS_ECS_CLUSTER \
+                            --services $AWS_ECS_SERVICE_PROD
                     '''
                 }
-                
             }
         }
-
     }
 }
