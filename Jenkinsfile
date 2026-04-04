@@ -1,31 +1,7 @@
 pipeline {
     agent any
 
-    environment {
-        NETLIFY_SITE_ID = "b0eda2c9-1a67-4c10-97e8-15a8b6e8ff59"
-        NETLIFY_AUTH_TOKEN = credentials('netlify-token')
-    }
-
     stages {
-
-        stage('AWS'){
-            agent{
-                docker{
-                    image 'amazon/aws-cli'
-                    args '--entrypoint="" -u root:root'
-                }
-            }
-            steps{
-                withCredentials([usernamePassword(credentialsId: 'MY-AWS-TOKEN', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
-                    sh '''
-                        aws --version
-                        aws s3 ls
-                    '''
-                }
-                
-            }
-        }
-        
         stage('Build') {
             agent {
                 docker {
@@ -45,8 +21,8 @@ pipeline {
                 '''
             }
         }
-        
-        stage('Run tests in parallel') {
+
+        stage('Run Demo tests in parallel') {
             parallel {
                 stage('Test') {
                     agent {
@@ -71,7 +47,7 @@ pipeline {
                         }
                     }
                 }
-        
+
                 stage('End-to-End') {
                     agent {
                         docker {
@@ -108,38 +84,31 @@ pipeline {
             }
         }
 
-
-        stage('Deploy Staging') {
+        stage('Deploying to Staging Environment') {
             agent {
                 docker {
-                    image 'my-playwright:latest'
+                    image 'amazon/aws-cli'
+                    args '--entrypoint="" -u root:root'
                     reuseNode true
-                    args '-u root:root' 
                 }
             }
+            environment {
+                AWS_S3_BUCKET = 'learn-jenkins-yjb'
+                STAGING_PATH = "staging-${env.BUILD_ID}"
+            }
             steps {
-                sh '''
-                    ls -la
-                    echo "Deploying to staging. Site ID : $NETLIFY_SITE_ID"
-                    npx netlify status
-
-                    # Draft deploy (manual upload, no build system)
-                    npx netlify deploy \
-                        --dir=build \
-                        --site $NETLIFY_SITE_ID \
-                        --auth $NETLIFY_AUTH_TOKEN \
-                        --json \
-                        --no-build > stag-deploy-output.json
-
-                    ls -la
-                '''
-                script{
-                    env.STAGING_URL = sh(script: "jq -r '.deploy_url' stag-deploy-output.json", returnStdout : true)
+                withCredentials([usernamePassword(credentialsId: 'MY-AWS-TOKEN',
+                                                 passwordVariable: 'AWS_SECRET_ACCESS_KEY',
+                                                 usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                    sh '''
+                        aws s3 sync build s3://$AWS_S3_BUCKET/$STAGING_PATH --delete
+                        aws s3 ls s3://$AWS_S3_BUCKET/$STAGING_PATH
+                    '''
                 }
             }
         }
 
-        stage('Stag End-to-End') {
+        stage('Staging : End-to-End Testing') {
             agent {
                 docker {
                     image 'my-playwright:latest'
@@ -147,17 +116,14 @@ pipeline {
                     args '-u root:root'
                 }
             }
-            
             environment {
-                CI_ENVIRONMENT_URL = "$env.STAGING_URL"
+                CI_ENVIRONMENT_URL = "http://learn-jenkins-yjb.s3-website-ap-south-1.amazonaws.com/${env.STAGING_PATH}/"
             }
-
             steps {
                 sh '''
                     npx playwright test --reporter=html
                 '''
             }
-
             post {
                 always {
                     publishHTML([
@@ -175,57 +141,38 @@ pipeline {
             }
         }
 
-        stage('Approval') {
+        stage('Approval Process') {
             steps {
-                echo 'Asking approval.....'
                 timeout(time: 15, unit: 'MINUTES') {
-                    input message: 'Do you wish to deploy to production?', ok: 'Yes, I am sure'
+                    input message: 'Do you wish to deploy to production?', ok: 'Yes, deploy'
                 }
             }
         }
 
-        stage('Deploy Prod') {
+        stage('Deploying to Prod Environment') {
             agent {
                 docker {
-                    image 'my-playwright:latest'
+                    image 'amazon/aws-cli'
+                    args '--entrypoint="" -u root:root'
                     reuseNode true
-                    args '-u root:root' 
                 }
             }
+            environment {
+                AWS_S3_BUCKET = 'learn-jenkins-yjb-prod'
+            }
             steps {
-                sh '''
-                    ls -la
-                    echo "Deploying to production. Site ID : $NETLIFY_SITE_ID"
-                    npx netlify status
-
-                    # Step 1: Draft deploy (manual upload, no build system)
-                    npx netlify deploy \
-                        --dir=build \
-                        --site $NETLIFY_SITE_ID \
-                        --auth $NETLIFY_AUTH_TOKEN \
-                        --json \
-                        --no-build > deploy-output.json
-
-                    jq -r '.deploy_url' deploy-output.json
-
-                    # Step 2: Promote draft to production
-                    npx netlify deploy \
-                        --prod \
-                        --dir=build \
-                        --site $NETLIFY_SITE_ID \
-                        --auth $NETLIFY_AUTH_TOKEN \
-                        --json \
-                        --no-build \
-                        --skip-functions-cache > prod-deploy-output.json
-
-                    jq -r '.deploy_url' prod-deploy-output.json
-
-                    ls -la
-                '''
+                withCredentials([usernamePassword(credentialsId: 'MY-AWS-TOKEN',
+                                                 passwordVariable: 'AWS_SECRET_ACCESS_KEY',
+                                                 usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                    sh '''
+                        aws s3 sync build s3://$AWS_S3_BUCKET --delete
+                        aws s3 ls s3://$AWS_S3_BUCKET
+                    '''
+                }
             }
         }
 
-        stage('Prod End-to-End') {
+        stage('Production : End-to-End Testing') {
             agent {
                 docker {
                     image 'my-playwright:latest'
@@ -233,17 +180,14 @@ pipeline {
                     args '-u root:root'
                 }
             }
-            
             environment {
-                CI_ENVIRONMENT_URL = "https://startling-shortbread-d7ebe6.netlify.app"
+                CI_ENVIRONMENT_URL = "http://learn-jenkins-yjb-prod.s3-website-ap-south-1.amazonaws.com/"
             }
-
             steps {
                 sh '''
                     npx playwright test --reporter=html
                 '''
             }
-
             post {
                 always {
                     publishHTML([
