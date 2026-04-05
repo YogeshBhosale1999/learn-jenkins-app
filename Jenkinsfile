@@ -15,7 +15,7 @@ pipeline {
         stage('Build Node App') {
             agent {
                 docker {
-                    image 'node:18-alpine'
+                    image 'my-playwright'
                     reuseNode true
                     args '-u root:root'
                 }
@@ -47,33 +47,35 @@ pipeline {
         stage('Push Docker Image to ECR') {
             agent {
                 docker {
-                    image 'docker:24.0'
+                    image 'ubuntu-aws-docker-cli'
                     reuseNode true
                     args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
+
             steps {
                 withCredentials([usernamePassword(credentialsId: 'MY-AWS-TOKEN',
-                                                  passwordVariable: 'AWS_SECRET_ACCESS_KEY',
-                                                  usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                                                passwordVariable: 'AWS_SECRET_ACCESS_KEY',
+                                                usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
                     sh '''
-                        # Get ECR login password using AWS CLI in a subshell
-                        LOGIN_PASSWORD=$(aws ecr get-login-password --region $AWS_DEFAULT_REGION)
+                        docker --version
+                        aws --version
+                        jq --version
 
                         # Login to ECR
-                        echo $LOGIN_PASSWORD | docker login --username AWS --password-stdin $AWS_DOCKER_ECR
+                        aws ecr get-login-password --region $AWS_DEFAULT_REGION \
+                            | docker login --username AWS --password-stdin $AWS_DOCKER_ECR
 
                         # Push image
                         docker push $AWS_DOCKER_ECR/$APP_NAME:$REACT_APP_VERSION
                     '''
                 }
-            }
         }
 
         stage('Deploy to AWS ECS') {
             agent {
                 docker {
-                    image 'amazon/aws-cli:2.15.0'
+                    image 'my-aws-cli'
                     reuseNode true
                     args '-u root:root'
                 }
