@@ -2,11 +2,10 @@ pipeline {
     agent any
 
     stages {
-
-        stage('Docker'){
-            steps{
-                sh 'docker build -f ci/Dockerfile.playwright -t my-playwright:latest . '
-                sh 'docker build -f ci/Dockerfile.aws-ci -t my-aws-cli:latest . '
+        stage('Docker') {
+            steps {
+                sh 'docker build -f ci/Dockerfile.playwright -t my-playwright:latest .'
+                sh 'docker build -f ci/Dockerfile.aws-ci -t my-aws-cli:latest .'
                 sh 'docker build -f ci/Dockerfile.aws-docker -t my-aws-docker-cli:latest .'
             }
         }

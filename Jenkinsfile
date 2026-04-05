@@ -31,9 +31,9 @@ pipeline {
         stage('Build & Push Docker Image') {
             agent {
                 docker {
-                    image 'my-aws-docker-cli'   // local image with Docker + AWS CLI
+                    image 'my-aws-docker-cli:latest'
                     reuseNode true
-                    args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
+                    args '--entrypoint="" -u root:root -v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
             steps {
@@ -43,6 +43,7 @@ pipeline {
                     sh '''
                         docker version
                         aws --version
+                        jq --version
 
                         # Build and tag image
                         docker build -t $AWS_DOCKER_ECR/$APP_NAME:$REACT_APP_VERSION .
@@ -61,7 +62,7 @@ pipeline {
         stage('Deploy to AWS ECS') {
             agent {
                 docker {
-                    image 'my-aws-docker-cli'   // same local image
+                    image 'my-aws-docker-cli:latest'
                     reuseNode true
                     args '--entrypoint="" -u root:root'
                 }

@@ -1,8 +1,13 @@
 FROM docker:24.0
 
 # Install AWS CLI v2 and jq
-RUN apk add --no-cache curl unzip bash jq \
+RUN apk add --no-cache curl unzip bash jq python3 py3-pip \
     && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip \
     && unzip awscliv2.zip \
     && ./aws/install \
-    && rm -rf aws awscliv2.zip
+    && rm -rf aws awscliv2.zip \
+    && aws --version
+
+ENV PATH="/usr/local/bin:${PATH}"
+WORKDIR /app
+ENTRYPOINT ["/bin/bash", "-c"]

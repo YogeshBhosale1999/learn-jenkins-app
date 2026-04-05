@@ -6,3 +6,5 @@ RUN npm install -g netlify-cli@latest \
     && apt-get install -y jq \
     && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /app
+ENTRYPOINT ["/bin/bash", "-c"]
