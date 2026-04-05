@@ -91,6 +91,8 @@ pipeline {
                         apk add --no-cache jq || apt-get update && apt-get install -y jq
                         jq --version
 
+                        sed -i "s/#APP_VERSION#/$REACT_APP_VERSION/g" aws/task-definition-prod.json
+
                         NEW_TD_ARN=$(aws ecs register-task-definition \
                             --cli-input-json file://aws/task-definition-prod.json \
                             | jq -r '.taskDefinition.taskDefinitionArn')
