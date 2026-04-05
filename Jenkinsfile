@@ -52,11 +52,10 @@ pipeline {
                     args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
-
             steps {
                 withCredentials([usernamePassword(credentialsId: 'MY-AWS-TOKEN',
-                                                passwordVariable: 'AWS_SECRET_ACCESS_KEY',
-                                                usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                                                  passwordVariable: 'AWS_SECRET_ACCESS_KEY',
+                                                  usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
                     sh '''
                         docker --version
                         aws --version
@@ -70,6 +69,7 @@ pipeline {
                         docker push $AWS_DOCKER_ECR/$APP_NAME:$REACT_APP_VERSION
                     '''
                 }
+            }
         }
 
         stage('Deploy to AWS ECS') {
@@ -88,7 +88,7 @@ pipeline {
                         aws --version
 
                         # Install jq inside AWS CLI container
-                        apk add --no-cache jq
+                        apk add --no-cache jq || apt-get update && apt-get install -y jq
                         jq --version
 
                         NEW_TD_ARN=$(aws ecs register-task-definition \
