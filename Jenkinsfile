@@ -28,12 +28,28 @@ pipeline {
             }
         }
 
-        stage('Build & Push Docker Image') {
+        stage('Build Docker Image') {
             agent {
                 docker {
-                    image 'my-aws-docker-cli:latest'
+                    image 'docker:24.0'
                     reuseNode true
-                    args '--entrypoint="" -u root:root -v /var/run/docker.sock:/var/run/docker.sock'
+                    args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
+                }
+            }
+            steps {
+                sh '''
+                    docker version
+                    docker build -t $AWS_DOCKER_ECR/$APP_NAME:$REACT_APP_VERSION .
+                '''
+            }
+        }
+
+        stage('Push Docker Image to ECR') {
+            agent {
+                docker {
+                    image 'docker:24.0'
+                    reuseNode true
+                    args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
             steps {
@@ -41,16 +57,11 @@ pipeline {
                                                   passwordVariable: 'AWS_SECRET_ACCESS_KEY',
                                                   usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
                     sh '''
-                        docker version
-                        aws --version
-                        jq --version
-
-                        # Build and tag image
-                        docker build -t $AWS_DOCKER_ECR/$APP_NAME:$REACT_APP_VERSION .
+                        # Get ECR login password using AWS CLI in a subshell
+                        LOGIN_PASSWORD=$(aws ecr get-login-password --region $AWS_DEFAULT_REGION)
 
                         # Login to ECR
-                        aws ecr get-login-password --region $AWS_DEFAULT_REGION \
-                            | docker login --username AWS --password-stdin $AWS_DOCKER_ECR
+                        echo $LOGIN_PASSWORD | docker login --username AWS --password-stdin $AWS_DOCKER_ECR
 
                         # Push image
                         docker push $AWS_DOCKER_ECR/$APP_NAME:$REACT_APP_VERSION
@@ -62,9 +73,9 @@ pipeline {
         stage('Deploy to AWS ECS') {
             agent {
                 docker {
-                    image 'my-aws-docker-cli:latest'
+                    image 'amazon/aws-cli:2.15.0'
                     reuseNode true
-                    args '--entrypoint="" -u root:root'
+                    args '-u root:root'
                 }
             }
             steps {
@@ -73,6 +84,9 @@ pipeline {
                                                   usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
                     sh '''
                         aws --version
+
+                        # Install jq inside AWS CLI container
+                        apk add --no-cache jq
                         jq --version
 
                         NEW_TD_ARN=$(aws ecs register-task-definition \
